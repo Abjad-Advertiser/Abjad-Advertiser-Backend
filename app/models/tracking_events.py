@@ -7,8 +7,8 @@ from app.utils.cuid import generate_cuid
 
 class TrackingEvent(Base):
     id = Column(Integer,autoincrement=False, primary_key=True, autoincrement=True, default=generate_cuid)
-    ad_id = Column(Integer, ForeignKey("advertisements.id"), nullable=False)
-    publisher_id = Column(Integer, ForeignKey("publisher.id"), nullable=False)
+    ad_id = Column(Integer, ForeignKey("advertisers.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
     event_type = Column(Enum("impression", "click"), nullable=False)
     event_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     viewer_ip = Column(String(45), nullable=False)  # IPv4/IPv6 address of viewer
