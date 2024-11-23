@@ -1,1 +1,43 @@
 pytest
+
+
+# Get all staged Python files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=d | grep ".py$")
+
+if [ -n "$STAGED_FILES" ]; then
+    echo "Running Python formatters on staged files..."
+    
+    # Run autopep8 to fix Flake8 issues
+    echo "Running autopep8..."
+    autopep8 --in-place --aggressive --aggressive $STAGED_FILES
+    
+    # Run Ruff
+    echo "Running Ruff..."
+    ruff check $STAGED_FILES
+
+    # Run Ruff autofix
+    echo "Running Ruff autofix..."
+    ruff format $STAGED_FILES
+
+    # Run Black formatter
+    echo "Running Black..."
+    black $STAGED_FILES || true
+    
+    # Run isort
+    echo "Running isort..."
+    isort $STAGED_FILES
+    
+    # After formatting, re-stage the files
+    for file in $STAGED_FILES; do
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+    done
+    
+    # Run final Flake8 check for any remaining issues
+    echo "Running final Flake8 check..."
+    flake8 $STAGED_FILES || {
+        echo "Some Flake8 issues couldn't be fixed automatically. Please fix them manually."
+        exit 1
+    }
+fi

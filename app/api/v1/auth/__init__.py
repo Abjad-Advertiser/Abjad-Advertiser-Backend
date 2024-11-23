@@ -29,12 +29,14 @@ Security Features:
 
 """
 
+from fastapi import APIRouter
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport
-from app.schemas.users import UserCreate, UserRead, UserUpdate
-from app.models.users import get_user_db
+
 from app.models.sessions import get_database_strategy
-from fastapi import APIRouter
+from app.models.users import get_user_db
+from app.schemas.users import UserCreate, UserRead, UserUpdate
+
 auth_router = APIRouter(tags=["Authentication"])
 
 # Cookie transport configuration
@@ -42,7 +44,8 @@ auth_router = APIRouter(tags=["Authentication"])
 cookie_transport = CookieTransport(cookie_max_age=3600)
 
 # Authentication backend configuration
-# This section configures the authentication backend, specifying how sessions are managed.
+# This section configures the authentication backend, specifying how
+# sessions are managed.
 auth_backend = AuthenticationBackend(
     name="session",  # Identifier for the authentication backend
     transport=cookie_transport,  # Defines how sessions are transmitted
@@ -71,38 +74,36 @@ current_superuser = fastapi_users.current_user(active=True, superuser=True)
 auth_router.include_router(
     fastapi_users.get_auth_router(auth_backend, requires_verification=True),
     prefix="/session",
-    tags=["Authentication"]
+    tags=["Authentication"],
 )
 
 # User registration routes
 auth_router.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     tags=["Authentication"],
-    prefix="/register"
+    prefix="/register",
 )
 
 # Password reset functionality
 auth_router.include_router(
     fastapi_users.get_reset_password_router(),
     tags=["Authentication"],
-    prefix="/password"
+    prefix="/password",
 )
 
 # Email verification routes
 auth_router.include_router(
-    fastapi_users.get_verify_router(UserRead),
-    tags=["Authentication"],
-    prefix="/verify"
+    fastapi_users.get_verify_router(UserRead), tags=["Authentication"], prefix="/verify"
 )
 
 # User management routes (CRUD operations)
 auth_router.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
-    tags=["Users"]
+    tags=["Users"],
 )
 
-#TODO:
+# TODO:
 # # OAuth routes
 # auth_router.include_router(
 #     # TODO: Add OAuth client and backend

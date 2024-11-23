@@ -1,21 +1,23 @@
-from sqlalchemy import Column, String, Enum, Boolean, DateTime
-from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from datetime import datetime, timezone
 import enum
-from app.utils.cuid import generate_cuid
-from app.db.db_session import Base
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Mapped, mapped_column
+from datetime import UTC, datetime
+
 from fastapi import Depends
+from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
+from passlib.context import CryptContext
+from sqlalchemy import Boolean, Column, DateTime, Enum, String
+from sqlalchemy.orm import Mapped, Session, mapped_column
+
 from app.db import get_db
+from app.db.db_session import Base
+from app.utils.cuid import generate_cuid
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class UserType(str, enum.Enum):
     """Enumeration for user types."""
+
     ADVERTISER = "advertiser"
     PUBLISHER = "publisher"
     ADMIN = "admin"
@@ -39,24 +41,34 @@ class User(SQLAlchemyBaseUserTable[str], Base):
         created_at (datetime): Timestamp of when the user was created.
         last_login (datetime): Timestamp of the last login.
     """
+
     __tablename__ = "users"
 
     # Account credentials info
-    id: Mapped[str] = mapped_column(String, primary_key=True, autoincrement=False, index=True, unique=True, default=generate_cuid)
+    id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        autoincrement=False,
+        index=True,
+        unique=True,
+        default=generate_cuid,
+    )
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    user_type = Column(Enum(UserType), index=True, nullable=False, default=UserType.NORMAL)
+    user_type = Column(
+        Enum(UserType), index=True, nullable=False, default=UserType.NORMAL
+    )
     phone_number = Column(String(20), index=True, unique=True, nullable=True)
-    
+
     # Personal/Company Info
     full_name = Column(String(100), nullable=True)
     company_name = Column(String(100), nullable=True)
-    
+
     # Account Status
     is_active = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     last_login = Column(DateTime)
 
     def __init__(self, **kwargs):
@@ -73,7 +85,7 @@ class User(SQLAlchemyBaseUserTable[str], Base):
         # Automatically hash password if provided
         if "password" not in kwargs and "hashed_password" not in kwargs:
             raise ValueError("Password is required to create credentials")
-        
+
         if "password" in kwargs:
             kwargs["hashed_password"] = get_password_hash(kwargs.pop("password"))
         super().__init__(**kwargs)
@@ -89,7 +101,9 @@ class User(SQLAlchemyBaseUserTable[str], Base):
         """
         return pwd_context.verify(plain_password, self.hashed_password)
 
-    def safe_model_dump(self, include_profile: bool = False, exclude_none: bool = True) -> dict:
+    def safe_model_dump(
+        self, include_profile: bool = False, exclude_none: bool = True
+    ) -> dict:
         """Safe dump model to dictionary with configurable options.
 
         Args:
@@ -101,32 +115,35 @@ class User(SQLAlchemyBaseUserTable[str], Base):
         """
         # Get all column names from the table
         columns = self.__table__.columns.keys()
-        
+
         # Create base dictionary from column values, excluding hashed_password
         data = {
-            col: getattr(self, col) 
-            for col in columns 
+            col: getattr(self, col)
+            for col in columns
             if col != "hashed_password"  # Don't include hashed password in dumps
         }
-        
+
         # Handle special types
-        for key, value in list(data.items()):  # Use list to avoid runtime modification issues
+        for key, value in list(
+            data.items()
+        ):  # Use list to avoid runtime modification issues
             if isinstance(value, datetime):
                 data[key] = value.isoformat() if value else None
             elif isinstance(value, enum.Enum):
                 data[key] = value.value if value else None
-                
+
         if include_profile and self.profile:
             # Get profile data as dict, excluding None values if requested
             profile_data = {
-                k: v for k, v in self.profile.__dict__.items() 
-                if not k.startswith('_') and (not exclude_none or v is not None)
+                k: v
+                for k, v in self.profile.__dict__.items()
+                if not k.startswith("_") and (not exclude_none or v is not None)
             }
             data["profile"] = profile_data
-            
+
         if exclude_none:
             return {k: v for k, v in data.items() if v is not None}
-            
+
         return data
 
 
@@ -141,6 +158,7 @@ def get_password_hash(password: str) -> str:
         str: The hashed password.
     """
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password.

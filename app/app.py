@@ -1,7 +1,10 @@
-from fastapi import FastAPI
-from app.api.v1.auth import auth_router
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.api.v1.auth import auth_router
 from app.models import create_db_and_tables_fastapi_users
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,11 +25,12 @@ async def lifespan(app: FastAPI):
     await create_db_and_tables_fastapi_users()
     yield
 
+
 app = FastAPI(
     title="Abjad Ad Server API",
     version="1.0.0",
     description="API for serving and managing advertisements services",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Include routers
