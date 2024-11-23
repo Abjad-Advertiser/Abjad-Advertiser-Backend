@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: abjad-backend
+    env_file:
+      - .env
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - postgres_db
+    restart: always
+
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: abjad_advertiser_postgres
+    ports:
+      - "5432:5432" # Exposing the PostgreSQL database
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: abjad_advertiser_db
+    volumes:
+      - .db_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  db_data:
+    driver: local
+    external: false
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/.db_data
+
