@@ -1,1 +1,3 @@
-npx --no -- commitlint --edit $1
+# Start of Selection
+npx --no -- commitlint --edit $1 || commitlint --edit $1
+# End of Selection

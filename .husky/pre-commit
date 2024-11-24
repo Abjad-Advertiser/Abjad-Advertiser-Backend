@@ -1,8 +1,24 @@
+# Start of Selection
 # Activate virtual environment
-. venv/bin/activate || {
-    echo "Failed to activate virtual environment. Make sure venv exists and is properly set up."
+if [ -d ".venv" ]; then
+    # Check if the script is running on Windows
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+        # Windows
+        .venv\\Scripts\\activate || {
+            echo "Failed to activate virtual environment. Make sure .venv exists and is properly set up."
+            exit 1
+        }
+    else
+        # macOS/Linux
+        . .venv/bin/activate || {
+            echo "Failed to activate virtual environment. Make sure .venv exists and is properly set up."
+            exit 1
+        }
+    fi
+else
+    echo "Virtual environment directory .venv does not exist."
     exit 1
-}
+fi
 
 # Run pytest
 pytest || {
@@ -73,8 +89,10 @@ if [ -n "$STAGED_FILES" ]; then
 
     # Run pylint to check for import errors
     echo "Running pylint import checks..."
+    export PYTHONPATH=$(pwd)
     pylint $STAGED_FILES --disable=all --enable=E0401 || {
         echo "Pylint found import errors. Please fix the missing imports."
         exit 1
     }
 fi
+# End of Selection
