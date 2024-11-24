@@ -5,7 +5,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.db_session import AsyncSessionLocal, Base, engine
-from app.models.users import User
+from app.models.users.users import User
 
 
 async def create_db_and_tables_fastapi_users():

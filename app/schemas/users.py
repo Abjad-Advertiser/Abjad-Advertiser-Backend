@@ -4,7 +4,7 @@ import phonenumbers
 from fastapi_users import schemas
 from pydantic import EmailStr, StringConstraints, field_validator
 
-from app.models.users import UserType
+from app.models.users.users import UserType
 
 
 class UserRead(schemas.BaseUser):
