@@ -57,11 +57,11 @@ cd Abjad-Advertiser-Backend
 ```bash
 # Windows
 python -m venv .venv
-venv\Scripts\activate
+.venv\Scripts\activate
 
 # macOS/Linux
 python3 -m venv .venv
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 #### Install Python dependencies
@@ -177,6 +177,31 @@ docker compose up --build
 3. **Permission Issues**: 
    - Windows: Run PowerShell as Administrator
    - Linux/macOS: Use `sudo` for Docker commands if needed
+4. **Commit linting errors**:
+    - Install npx: `npm install -g npm`
+    - Install commitlint: 
+      ```bash
+      # Windows - Install commitlint globally
+      npm install -g @commitlint/config-conventional @commitlint/cli
+
+      # macOS/Linux - Install commitlint globally
+      npm install -g @commitlint/{cli,config-conventional}
+
+      # Then for both platforms
+      npm root -g
+
+      # Take the path output and add it to the PATH environment variable
+
+      # macOS/Linux
+      export PATH="$PATH:$(npm root -g)"
+
+      # Windows
+      setx /M PATH "%PATH%;$(npm root -g)"
+      # Or manually add it to PATH from the environment application
+      ```
+  5. **Python linting errors**:
+    - Ensure Python is in the PATH environment variable
+    - Ensure you created the `.venv` virtual environment (See [Set Up Python Virtual Environment](#set-up-python-virtual-environment))
 
 ### Logs
 - Application logs: `logs/adserver.log`
@@ -186,5 +211,8 @@ docker compose up --build
 1. Ensure all tests pass: `pytest`
 2. Format code: `black . && isort .`
 3. Run linters: `flake8 . && pylint app/`
-4. Follow conventional commits specification
+4. Follow conventional commits specification or run `commitlint --edit <your-commit-message>`
 5. Submit a pull request in new branch if needed
+
+*Usually Husky if you set it up, will catch most issues before you can commit, but if it doesn't, follow the steps above*
+
