@@ -1,10 +1,16 @@
 cuid2==2.0.1
 fastapi==0.115.5
+fastapi_users==14.0.0
 fastapi_users_db_sqlalchemy==6.0.1
 passlib==1.7.4
 phonenumbers==8.13.50
 pydantic==2.10.1
 python-dotenv==1.0.1
 SQLAlchemy==2.0.36
-typing_extensions==4.12.2
 uvicorn==0.32.1
+pylint==3.3.1
+pytest==8.3.3
+black==24.3.0
+flake8==6.1.0
+autopep8==2.1.0
+isort==5.12.0
