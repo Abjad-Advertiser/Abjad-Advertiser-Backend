@@ -10,39 +10,181 @@ The API is built using the following technologies and frameworks:
 - **SQLAlchemy**: An ORM (Object Relational Mapper) that allows for database interactions using Python objects.
 - **PostgreSQL**: A powerful, open-source relational database system used for storing data.
 - **Docker**: Used for containerization, allowing the application to run in isolated environments.
+- **Husky**: Git hooks management for consistent code quality.
+- **Various Linters**: Ruff, Black, isort, Flake8, and Pylint for code quality.
+
+## Prerequisites
+
+### 1. Python Setup
+- Install Python 3.12.5 or later:
+  - **Windows**: Download from [Python.org](https://www.python.org/downloads/)
+  - **macOS**: `brew install python@3.12`
+  - **Linux**: `sudo apt-get install python3.12`
+
+### 2. Docker Setup
+- Install Docker and Docker Compose:
+  - **Windows/macOS**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+  - **Linux**:
+    ```bash
+    # Install Docker
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+
+    # Install Docker Compose
+    sudo apt-get install docker-compose
+    ```
+
+### 3. Node.js Setup (for Husky)
+- Install Node.js 18 or later:
+  - **All Platforms**: Download from [Node.js website](https://nodejs.org/)
+  - **Using nvm**:
+    ```bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    nvm install 18
+    nvm use 18
+    ```
+
+## Project Setup
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Abjad-Advertiser/Abjad-Advertiser-Backend.git
+cd Abjad-Advertiser-Backend
+```
+
+
+### 2. Set Up Python Virtual Environment
+```bash
+# Windows
+python -m venv .venv
+venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv .venv
+source venv/bin/activate
+```
+
+#### Install Python dependencies
+```bash
+# Windows
+pip install -r requirements.txt
+
+# macOS/Linux
+pip3 install -r requirements.txt
+```
+
+### 3. Set Up Node.js Dependencies
+```bash
+npm install
+```
+
+### 4. Configure Environment Variables
+Create a `.env` file in the root directory:
+```bash
+PORT=8000
+DATABASE_URL=postgresql+asyncpg://<username>:<password>@postgres_db:5432/abjad_advertiser_db
+SECRET_KEY=<your-secret-key>
+ALGORITHM=<your-algorithm>
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+DEBUG=True
+```
+
+### 5. Set Up Git Hooks
+Husky will automatically set up git hooks after npm install. These hooks will:
+- Run Python linters (Black, isort, Flake8, Pylint) before commits
+- Validate commit messages
+- Run tests before pushing
 
 ## Running the Application
 
-### Prerequisites
-1. **Docker**: Ensure you have Docker installed on your machine.
-2. **Docker Compose**: This is included with Docker Desktop installations.
+### Using Docker (Highly Recommended)
 
-### Steps to Run
-1. **Clone the Repository**: 
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+#### Build and start containers
 
-2. **Set Up Environment Variables**: Create a `.env` file in the root directory of the project. You can use the following template:
-   ```
-   PORT=8000
-   DATABASE_URL=postgresql+asyncpg://<username>:<password>@postgres_db:5432/abjad_advertiser_db
-   SECRET_KEY=<your-secret-key>
-   ALGORITHM=<your-algorithm>
-   ACCESS_TOKEN_EXPIRE_MINUTES=60
-   DEBUG=True
-   ```
+```bash
+docker compose up --build
+```
 
-3. **Build and Run the Containers**:
-   ```bash
-   docker-compose up --build
-   ```
+#### Stop containers
 
-4. **Access the API**: Once the containers are running, you can access the API at `http://localhost:8000`.
+```bash
+docker compose down
+```
 
-### Database Setup
-The application uses PostgreSQL as its database. The database schema is created automatically when the application starts, thanks to SQLAlchemy's `Base.metadata.create_all()` method, which is called during the application lifecycle.
+#### Start PostgreSQL container only
+```bash
+docker compose up -d postgres_db
+```
 
-### API Endpoints
-The API provides various endpoints for user management, advertisement management, and event tracking. You can explore the available routes by accessing the FastAPI documentation at `http://localhost:8000/docs`.
+
+### Run the FastAPI application
+```bash
+# Windows
+python main.py
+
+# macOS/Linux
+python3 main.py
+```
+
+## Development Tools
+
+### Code Formatting
+The project uses several tools for code quality:
+
+- **Black**: For Python code formatting.
+- **isort**: For sorting imports.
+- **Ruff**: For Python linting.
+- **Pylint**: For Python linting.
+- **Flake8**: For Python linting.
+
+### Running Tests & Writing tests
+To run existing tests:
+```bash
+pytest
+```
+
+It's highly recommended to write tests for new features in test files in the `tests` directory.
+
+
+## API Documentation
+Once the application is running, you can access:
+- Interactive API documentation: `http://localhost:8000/docs`
+- Alternative API documentation: `http://localhost:8000/redoc`
+
+## Database Management
+The project uses SQLAlchemy to interact with the database. The database schema is defined in the `models` directory.
+
+To create the database and tables, run:
+```bash
+# ! Not tested, but should work
+alembic init alembic
+alembic migrate
+alembic upgrade head
+```
+
+### Restart containers
+```bash
+docker compose down
+docker compose up --build
+```
+
+
+## Troubleshooting
+
+### Common Issues
+1. **Port Conflicts**: If port 8000 is in use, modify the `PORT` in `.env`
+2. **Database Connection**: Ensure PostgreSQL container is running before starting the application
+3. **Permission Issues**: 
+   - Windows: Run PowerShell as Administrator
+   - Linux/macOS: Use `sudo` for Docker commands if needed
+
+### Logs
+- Application logs: `logs/adserver.log`
+- Docker logs: `docker-compose logs`
+
+## Contributing
+1. Ensure all tests pass: `pytest`
+2. Format code: `black . && isort .`
+3. Run linters: `flake8 . && pylint app/`
+4. Follow conventional commits specification
+5. Submit a pull request in new branch if needed
