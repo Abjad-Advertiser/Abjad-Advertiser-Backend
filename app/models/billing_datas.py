@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, ForeignKey, Integer, String
 
 from app.db.db_session import Base
-from app.models.users.users import Credentials
+from app.models.users import Credentials
 from app.utils.cuid import generate_cuid
 
 
