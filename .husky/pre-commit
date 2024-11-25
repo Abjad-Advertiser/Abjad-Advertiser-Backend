@@ -1,23 +1,27 @@
 # Start of Selection
 # Activate virtual environment
 if [ -d ".venv" ]; then
-    # Check if the script is running on Windows
-    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-        # Windows
-        .venv\\Scripts\\activate || {
-            echo "Failed to activate virtual environment. Make sure .venv exists and is properly set up."
-            exit 1
-        }
-    else
-        # macOS/Linux
-        . .venv/bin/activate || {
-            echo "Failed to activate virtual environment. Make sure .venv exists and is properly set up."
-            exit 1
-        }
-    fi
+    VENV_DIR=".venv"
+elif [ -d "venv" ]; then
+    VENV_DIR="venv"
 else
-    echo "Virtual environment directory .venv does not exist."
+    echo "Virtual environment directory (.venv or venv) does not exist."
     exit 1
+fi
+
+# Check if the script is running on Windows
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+    # Windows
+    $VENV_DIR\\Scripts\\activate || {
+        echo "Failed to activate virtual environment. Make sure $VENV_DIR exists and is properly set up."
+        exit 1
+    }
+else
+    # macOS/Linux
+    . $VENV_DIR/bin/activate || {
+        echo "Failed to activate virtual environment. Make sure $VENV_DIR exists and is properly set up."
+        exit 1
+    }
 fi
 
 # Run pytest
