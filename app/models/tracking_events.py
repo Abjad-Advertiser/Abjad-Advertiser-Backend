@@ -6,11 +6,16 @@ from app.db.db_session import Base
 from app.utils.cuid import generate_cuid
 
 
+class EventType(Enum):
+    impression = "impression"
+    click = "click"
+
+
 class TrackingEvent(Base):
     id = Column(Integer, primary_key=True, autoincrement=False, default=generate_cuid)
     ad_id = Column(Integer, ForeignKey("advertisers.id"), nullable=False)
     campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
-    event_type = Column(Enum("impression", "click"), nullable=False)
+    event_type = Column(Enum(EventType), nullable=False)
     event_timestamp = Column(DateTime, default=lambda: datetime.now(UTC))
     # IPv4/IPv6 address of viewer
     viewer_ip = Column(String(45), nullable=False)
