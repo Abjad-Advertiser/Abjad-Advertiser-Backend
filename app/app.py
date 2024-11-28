@@ -2,8 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.v1 import general_router
+from app.api.v1.advertisers import advertisers_router
 from app.api.v1.auth import auth_router
-from app.models import create_db_and_tables_fastapi_users
+from app.api.v1.billing import billing_router
+from app.api.v1.campaigns import campaign_router
+from app.db import create_db_and_tables
 
 
 @asynccontextmanager
@@ -21,8 +25,9 @@ async def lifespan(app: FastAPI):
     """
     print("Available routes:")
     for route in app.routes:
-        print(f"  • {route.path}")
-    await create_db_and_tables_fastapi_users()
+        methods = ", ".join(sorted(route.methods)) if route.methods else "No methods"
+        print(f"  • {methods:<20} {route.path}")
+    await create_db_and_tables()
     yield
 
 
@@ -34,4 +39,9 @@ app = FastAPI(
 )
 
 # Include routers
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+api_v1_prefix = "/api/v1"
+app.include_router(auth_router, prefix=api_v1_prefix, tags=["Authentication"])
+app.include_router(general_router, prefix=api_v1_prefix, tags=["General"])
+app.include_router(advertisers_router, prefix=api_v1_prefix, tags=["Advertisers"])
+app.include_router(campaign_router, prefix=api_v1_prefix, tags=["Campaigns"])
+app.include_router(billing_router, prefix=api_v1_prefix, tags=["Billing"])

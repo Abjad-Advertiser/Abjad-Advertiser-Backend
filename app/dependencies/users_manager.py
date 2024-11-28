@@ -1,13 +1,15 @@
-import uuid
+from typing import Any
 
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, UUIDIDMixin
+from fastapi_users import BaseUserManager, InvalidID, InvalidPasswordException
 
 from app.core.config import settings
 from app.models.users import User, get_user_db
+from app.schemas.users import UserCreate
+from app.utils.cuid import CUID
 
 
-class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
+class UserManager(BaseUserManager[User, str]):
     """
     UserManager is responsible for managing user-related operations such as registration,
     password reset, and email verification.
@@ -19,6 +21,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     reset_password_token_secret = settings.SECRET
     verification_token_secret = settings.SECRET
+
+    def parse_id(self, value: Any) -> CUID:
+        try:
+            return CUID(value)
+        except ValueError as e:
+            raise InvalidID() from e
 
     async def on_after_register(self, user: User, request: Request | None = None):
         """
@@ -61,6 +69,31 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             f"Verification requested for user {
                 user.id}. Verification token: {token}"
         )
+
+    async def validate_password(self, password: str, user: UserCreate | User):
+        """
+        Validate the password for a user.
+
+        Args:
+            password (str): The password to validate.
+            user (User): The user associated with the password.
+        """
+        v = password
+        if len(v) < 8:
+            raise InvalidPasswordException(
+                "Password must be at least 8 characters long"
+            )
+        if not any(c.isupper() for c in v):
+            raise InvalidPasswordException(
+                "Password must contain at least one uppercase letter"
+            )
+        if not any(c.islower() for c in v):
+            raise InvalidPasswordException(
+                "Password must contain at least one lowercase letter"
+            )
+        if not any(c.isdigit() for c in v):
+            raise InvalidPasswordException("Password must contain at least one number")
+        return v
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):

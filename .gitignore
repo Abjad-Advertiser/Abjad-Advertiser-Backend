@@ -310,3 +310,4 @@ dist
 
 .ruff_cache
 package-lock.json
+.env.docker

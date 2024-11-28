@@ -7,8 +7,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
-from app.db import get_async_session
-from app.models import Base
+from app.db import Base, get_async_session
 
 
 class SessionsAccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
@@ -24,7 +23,7 @@ class SessionsAccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
     - user: Relationship to User model
     """
 
-    __tablename__ = "sessions_access_token"
+    __tablename__ = "sessions"
 
     @declared_attr
     def user_id(cls) -> Mapped[str]:
@@ -44,4 +43,7 @@ def get_database_strategy(
         get_access_token_db
     ),
 ) -> DatabaseStrategy:
-    return DatabaseStrategy(access_token_db, lifetime_seconds=3600)
+    from datetime import timedelta
+
+    lifetime_seconds = timedelta(weeks=2).total_seconds()  # 2 weeks in seconds
+    return DatabaseStrategy(access_token_db, lifetime_seconds=lifetime_seconds)

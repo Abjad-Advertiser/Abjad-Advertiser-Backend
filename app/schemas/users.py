@@ -4,7 +4,7 @@ import phonenumbers
 from fastapi_users import schemas
 from pydantic import EmailStr, StringConstraints, field_validator
 
-from app.models.users.users import UserType
+from app.models.users import UserType
 
 
 class UserRead(schemas.BaseUser):
@@ -42,31 +42,33 @@ class UserCreate(schemas.BaseUserCreate):
     - full_name: 2-100 characters
     - company_name: Optional, 2-100 characters
     - phone_number: Optional, E.164 format validation
-
-    Permission Flags:
-    - is_active: Indicates if the user is active and can access the platform
-    - is_superuser: Indicates if the user has administrative privileges
-    - is_verified: Indicates if the user is trusted because the verification process is manual acceptance
-    - is_publisher: Indicates if the user has content publishing rights
-    - is_advertiser: Indicates if the user has advertising privileges
     """
 
     username: Annotated[str, StringConstraints(min_length=3, max_length=50)]
     email: EmailStr
     password: Annotated[str, StringConstraints(min_length=8, max_length=255)]
-    user_type: UserType
-    full_name: Annotated[str, StringConstraints(min_length=2, max_length=100)]
-    company_name: Annotated[
-        str | None, StringConstraints(min_length=2, max_length=100)
-    ] = None
+    full_name: Annotated[str, StringConstraints(min_length=2, max_length=100)] = None
     phone_number: Annotated[
         str | None, StringConstraints(min_length=10, max_length=20)
     ] = None
-    is_active: bool = False
-    is_superuser: bool = False
-    is_verified: bool = False
-    is_publisher: bool = False
-    is_advertiser: bool = False
+
+    @field_validator("username")
+    def validate_username(cls, v: str):
+        if len(v) < 3 or len(v) > 30:
+            raise ValueError("Username must be between 3 and 30 characters long")
+        if not v.isalnum() and not any(c in ["_", "."] for c in v):
+            raise ValueError(
+                "Username can only contain alphanumeric characters, underscores, and periods"
+            )
+        if v[0].isdigit() or v[-1] in ["_", "."]:
+            raise ValueError(
+                "Username cannot start with a number or end with an underscore or period"
+            )
+        if ".." in v or "__" in v:
+            raise ValueError(
+                "Username cannot contain consecutive periods or underscores"
+            )
+        return v.lower()
 
     @field_validator("password")
     def validate_password(cls, v):

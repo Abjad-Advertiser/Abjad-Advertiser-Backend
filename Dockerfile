@@ -1,10 +1,9 @@
 FROM python:3.12.5 AS builder
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 
 WORKDIR /app
 
-# Install libmagic and file command
 RUN python -m venv .venv
 COPY requirements.txt ./
 RUN .venv/bin/pip install -r requirements.txt
@@ -19,5 +18,4 @@ COPY . .
 # Ensure the virtual environment's bin directory is in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Use Uvicorn to run the FastAPI app
-CMD ["python", "app/main.py"]
+CMD ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug"]
