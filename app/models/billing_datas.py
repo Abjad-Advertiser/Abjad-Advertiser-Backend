@@ -25,7 +25,7 @@ class BillingData(Base):
     @classmethod
     async def get_billing(
         cls: "BillingData", db_session: AsyncSession, user_id: str
-    ) -> "BillingData" | None:
+    ) -> "BillingData":
         """Get billing data for a user
 
         Args:

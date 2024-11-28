@@ -54,7 +54,7 @@ class Advertisement(Base):
     @classmethod
     async def get_ad(
         cls: "Advertisement", session: AsyncSession, ad_id: str
-    ) -> "Advertisement" | None:
+    ) -> "Advertisement":
         """Get an advertisement by ID.
 
         Args:
