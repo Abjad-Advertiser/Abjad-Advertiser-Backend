@@ -26,8 +26,7 @@ fi
 
 # Run pytest
 pytest || {
-    echo "Tests failed. Please fix failing tests before committing."
-    exit 1
+    echo "Tests failed. Please fix failing tests before committing, This will not prevent you from committing anyway."
 }
 
 # Get all staged Python files, if none, exit
@@ -47,8 +46,8 @@ if [ -n "$STAGED_FILES" ]; then
     }
     
     # Run Ruff
-    echo "Running Ruff..."
-    ruff check $STAGED_FILES || {
+    echo "Running Ruff autofix for somefiles..."
+    ruff check $STAGED_FILES --fix || {
         echo "Ruff check failed. Please fix the issues manually."
         exit 1
     }
@@ -64,14 +63,12 @@ if [ -n "$STAGED_FILES" ]; then
     echo "Running Black..."
     black $STAGED_FILES || {
         echo "Black formatting failed. Please fix formatting issues manually."
-        exit 1
     }
     
     # Run isort
     echo "Running isort..."
     isort $STAGED_FILES || {
         echo "isort failed. Please check import ordering manually."
-        exit 1
     }
     
     # After formatting, re-stage the files

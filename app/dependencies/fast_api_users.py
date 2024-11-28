@@ -2,11 +2,13 @@ from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport
 
 from app.models.sessions import get_database_strategy
-from app.models.users import get_user_db
+from app.models.users import User
+
+from .users_manager import get_user_manager
 
 # Cookie transport configuration
 # This defines how the session ID is transmitted in HTTP requests via cookies.
-cookie_transport = CookieTransport(cookie_max_age=3600)
+cookie_transport = CookieTransport("token-v1", cookie_max_age=3600)
 
 # Authentication backend configuration
 # This section configures the authentication backend, specifying how
@@ -22,8 +24,8 @@ auth_backend = AuthenticationBackend(
 # - Database adapter
 # - Authentication backend
 # - User models and schemas
-fastapi_users = FastAPIUsers(
-    get_user_db,
+fastapi_users = FastAPIUsers[User, str](
+    get_user_manager,
     [auth_backend],
 )
 
