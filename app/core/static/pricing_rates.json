@@ -1,0 +1,74 @@
+{
+    "regions": {
+        "eu": {
+            "description": "European Union",
+            "countries": ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"],
+            "rates": {
+                "impression": 0.001,
+                "click": 0.05,
+                "view": 0.01
+            },
+            "currency": "EUR"
+        },
+        "na": {
+            "description": "North America",
+            "countries": ["US", "CA", "MX"],
+            "rates": {
+                "impression": 0.002,
+                "click": 0.07,
+                "view": 0.015
+            },
+            "currency": "USD"
+        },
+        "uk": {
+            "description": "United Kingdom",
+            "countries": ["GB"],
+            "rates": {
+                "impression": 0.001,
+                "click": 0.06,
+                "view": 0.012
+            },
+            "currency": "GBP"
+        },
+        "apac": {
+            "description": "Asia Pacific",
+            "countries": ["JP", "KR", "CN", "SG", "AU", "NZ", "IN", "ID", "MY", "PH", "TH", "VN"],
+            "rates": {
+                "impression": 0.0008,
+                "click": 0.04,
+                "view": 0.008
+            },
+            "currency": "USD"
+        },
+        "mena": {
+            "description": "Middle East and North Africa",
+            "countries": ["SA", "AE", "QA", "KW", "BH", "OM", "EG", "MA", "TN", "DZ", "LB", "JO"],
+            "rates": {
+                "impression": 0.0015,
+                "click": 0.055,
+                "view": 0.011
+            },
+            "currency": "USD"
+        },
+        "other": {
+            "description": "Rest of World",
+            "countries": [],
+            "rates": {
+                "impression": 0.0005,
+                "click": 0.03,
+                "view": 0.005
+            },
+            "currency": "USD"
+        }
+    },
+    "default_currency": "USD",
+    "minimum_payout": 50.00,
+    "payment_schedule": "monthly",
+    "rate_multipliers": {
+        "mobile": 1.2,
+        "tablet": 1.1,
+        "desktop": 1.0
+    },
+    "last_updated": "2024-01-01",
+    "version": "1.0"
+}
