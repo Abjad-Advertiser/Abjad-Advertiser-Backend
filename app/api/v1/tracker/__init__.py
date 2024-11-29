@@ -199,7 +199,7 @@ async def track_campaign(
             LogLevel.INFO,
             LogCategory.TRACKING,
             f"Processed tracking event for campaign {campaign_id} with revenue details: {revenue_details}",
-            metadata={
+            event_metadata={
                 "tracking_event_id": tracking_event.id,
                 "campaign_id": campaign_id,
                 "publisher_id": publisher_id,
@@ -231,7 +231,7 @@ async def track_campaign(
             LogCategory.TRACKING,
             "Failed to process tracking event",
             error=e,
-            metadata={
+            event_metadata={
                 "campaign_id": campaign_id,
                 "publisher_id": publisher_id,
                 "event_type": track_request.event_type,

@@ -1,7 +1,10 @@
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from typing import Any
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import and_, select
 
@@ -18,10 +21,10 @@ class EventType(Enum):
 class TrackingEvent(Base):
     __tablename__ = "tracking_events"
 
-    id = Column(Integer, primary_key=True, autoincrement=False, default=generate_cuid)
-    ad_id = Column(Integer, ForeignKey("advertisers.id"), nullable=False)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
-    event_type = Column(Enum(EventType), nullable=False)
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
+    ad_id = Column(String, ForeignKey("advertisements.id"), nullable=False)
+    campaign_id = Column(String, ForeignKey("campaigns.id"), nullable=False)
+    event_type = Column(SQLEnum(EventType), nullable=False)
     event_timestamp = Column(DateTime, default=lambda: datetime.now(UTC))
     # IPv4/IPv6 address of viewer
     viewer_ip = Column(String(45), nullable=False)

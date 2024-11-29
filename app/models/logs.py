@@ -50,7 +50,7 @@ class SystemLog(Base):
     message = Column(Text, nullable=False)
 
     # Additional structured data
-    metadata = Column(JSON, nullable=True)
+    event_metadata = Column(JSON, nullable=True)
 
     # Error details if applicable
     error_type = Column(String(100), nullable=True)
@@ -70,7 +70,7 @@ class SystemLog(Base):
         level: LogLevel,
         category: LogCategory,
         message: str,
-        metadata: dict[str, Any] | None = None,
+        event_metadata: dict[str, Any] | None = None,
         error: Exception | None = None,
         request_id: str | None = None,
         user_id: str | None = None,
@@ -84,7 +84,7 @@ class SystemLog(Base):
             level: Log level
             category: Log category
             message: Main log message
-            metadata: Additional structured data
+            event_metadata: Additional structured data
             error: Exception object if logging an error
             request_id: Request ID if available
             user_id: User ID if available
@@ -98,7 +98,7 @@ class SystemLog(Base):
             level=level,
             category=category,
             message=message,
-            metadata=metadata,
+            event_metadata=event_metadata,
             request_id=request_id,
             user_id=user_id,
             ip_address=ip_address,

@@ -12,7 +12,7 @@ from app.utils.cuid import generate_cuid
 class CampaignTrackingSession(Base):
     __tablename__ = "campaign_tracking_sessions"
 
-    id = Column(String(128), primary_key=True, default=generate_cuid)
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
     jwt_token = Column(Text, nullable=False)
     viewer_ip = Column(String(45), nullable=False)
     viewer_user_agent = Column(String(500), nullable=False)

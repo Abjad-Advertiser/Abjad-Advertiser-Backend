@@ -24,7 +24,7 @@ class Logger:
         level: LogLevel,
         category: LogCategory,
         message: str,
-        metadata: dict[str, Any] | None = None,
+        event_metadata: dict[str, Any] | None = None,
         error: Exception | None = None,
         request: Request | None = None,
         user_id: str | None = None,
@@ -34,8 +34,8 @@ class Logger:
         Args:
             level: Log level
             category: Log category
-            message: Log message
-            metadata: Additional structured data
+            message: Main log message
+            event_metadata: Additional structured data
             error: Exception if logging an error
             request: FastAPI request object if available
             user_id: User ID if available
@@ -58,7 +58,7 @@ class Logger:
             level=level,
             category=category,
             message=message,
-            metadata=metadata,
+            event_metadata=event_metadata,
             error=error,
             request_id=request_id,
             user_id=user_id,
