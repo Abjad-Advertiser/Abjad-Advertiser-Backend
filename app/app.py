@@ -7,7 +7,7 @@ from app.api.v1.advertisers import advertisers_router
 from app.api.v1.auth import auth_router
 from app.api.v1.billing import billing_router
 from app.api.v1.campaigns import campaign_router
-from app.api.v1.publisher import publisher_router
+from app.api.v1.publishers import publisher_router
 from app.api.v1.tracker import tracker_router
 from app.db import create_db_and_tables
 

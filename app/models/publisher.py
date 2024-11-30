@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from sqlalchemy import Column, Enum, Float, String, select
+from sqlalchemy import Column, Enum, Float, ForeignKey, String, and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 
@@ -27,9 +27,12 @@ class Publisher(Base):
     # Relationships
     campaigns = relationship("Campaign", back_populates="publisher")
     tracking_events = relationship("TrackingEvent", back_populates="publisher")
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
 
     @classmethod
-    async def create(cls, session: AsyncSession, data: PublisherCreate) -> "Publisher":
+    async def create(
+        cls, session: AsyncSession, user_id: str, data: PublisherCreate
+    ) -> "Publisher":
         """Create a new publisher.
 
         Args:
@@ -41,6 +44,7 @@ class Publisher(Base):
         """
         publisher = cls(
             publishing_platform=data.publishing_platform,
+            user_id=user_id,
         )
         session.add(publisher)
         await session.commit()
@@ -79,6 +83,26 @@ class Publisher(Base):
         """
         result = await session.execute(select(cls).offset(skip).limit(limit))
         return result.scalars().all()
+
+    @classmethod
+    async def get_user_publishers(
+        cls, session: AsyncSession, user_id: str, skip: int = 0, limit: int = 100
+    ) -> list["Publisher"]:
+        """Get all publishers for a specific user."""
+        result = await session.execute(
+            select(cls).where(cls.user_id == user_id).offset(skip).limit(limit)
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_user_publisher(
+        cls, session: AsyncSession, user_id: str, publisher_id: str
+    ) -> Optional["Publisher"]:
+        """Get a specific publisher for a user."""
+        result = await session.execute(
+            select(cls).where(and_(cls.id == publisher_id, cls.user_id == user_id))
+        )
+        return result.scalars().first()
 
     async def update(self, session: AsyncSession, data: PublisherUpdate) -> "Publisher":
         """Update publisher details.

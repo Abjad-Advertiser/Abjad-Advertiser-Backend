@@ -18,7 +18,6 @@ from app.schemas.campaign_tracking_session import (
     CampaignTrackingSessionCreate, CampaignTrackingSessionResponse)
 from app.schemas.tracking_events import (TrackingEventCreate,
                                          TrackingEventResponse)
-from app.services.revenue import RevenueService
 from app.utils.device_ua import get_device_type
 from app.utils.ip_info_grabber import IPInfoGrabber
 from app.utils.sys_logger import LogCategory, Logger, LogLevel
@@ -95,11 +94,9 @@ async def init_tracking_session(
     if not client_ip:
         raise HTTPException(status_code=400, detail="Missing IP address")
 
-    user_agent = track_request.viewer_user_agent
+    user_agent = track_request.viewer_user_agent or request.headers.get("User-Agent")
     if not user_agent:
-        user_agent = request.headers.get("User-Agent")
-        if not user_agent:
-            raise HTTPException(status_code=400, detail="Missing user agent")
+        raise HTTPException(status_code=400, detail="Missing user agent")
 
     # Parse user agent to detect bots
     parsed_user_agent = parse_user_agent(user_agent)
@@ -187,35 +184,36 @@ async def track_campaign(
             publisher_id=publisher_id,
         )
 
-        # Process revenue for the event
-        revenue_service = RevenueService()
-        revenue_details = await revenue_service.process_tracking_event(
-            session, tracking_event, publisher
-        )
+        # Earnings details are now stored in the tracking event
+        earnings_details = {
+            "total_earnings": tracking_event.earnings,
+            "publisher_earnings": tracking_event.publisher_earnings,
+            "platform_earnings": tracking_event.platform_earnings,
+        }
 
         # Store this data in a system log
         log = Logger(session)
         await log.log(
             LogLevel.INFO,
             LogCategory.TRACKING,
-            f"Processed tracking event for campaign {campaign_id} with revenue details: {revenue_details}",
+            f"Processed tracking event for campaign {campaign_id} with earnings details: {earnings_details}",
             event_metadata={
                 "tracking_event_id": tracking_event.id,
                 "campaign_id": campaign_id,
                 "publisher_id": publisher_id,
                 "event_type": track_request.event_type,
-                "revenue_details": revenue_details,
+                "earnings_details": earnings_details,
                 "timestamp": datetime.now(UTC),
             },
         )
 
-        # Include revenue details in response
+        # Include earnings details in response
         response_data = TrackingEventResponse(
             id=tracking_event.id,
             campaign_id=campaign_id,
             publisher_id=publisher_id,
             event_type=track_request.event_type,
-            revenue_details=revenue_details,
+            earnings_details=earnings_details,
         )
 
         # Cleanup old blacklisted sessions

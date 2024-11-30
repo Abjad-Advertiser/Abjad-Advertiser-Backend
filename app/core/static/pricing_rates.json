@@ -62,13 +62,13 @@
         }
     },
     "default_currency": "USD",
-    "minimum_payout": 50.00,
+    "minimum_payout": 5.00,
     "payment_schedule": "monthly",
     "rate_multipliers": {
         "mobile": 1.2,
         "tablet": 1.1,
         "desktop": 1.0
     },
-    "last_updated": "2024-01-01",
+    "last_updated": "2024-12-01",
     "version": "1.0"
 }

@@ -4,21 +4,28 @@ from typing import Any
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Float, ForeignKey, String, and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import and_, select
 
+from app.core.config import settings
 from app.db.db_session import Base
+from app.models.campaigns import Campaign
+from app.models.publisher_earnings import PublisherEarnings
 from app.utils.cuid import generate_cuid
+from app.utils.pricing import PricingManager
 
 
 class EventType(Enum):
-    impression = "impression"
-    click = "click"
-    view = "view"
+    """Types of tracking events."""
+
+    IMPRESSION = "impression"
+    CLICK = "click"
+    VIEW = "view"
 
 
 class TrackingEvent(Base):
+    """Model for tracking ad interactions."""
+
     __tablename__ = "tracking_events"
 
     id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
@@ -26,6 +33,10 @@ class TrackingEvent(Base):
     campaign_id = Column(String, ForeignKey("campaigns.id"), nullable=False)
     event_type = Column(SQLEnum(EventType), nullable=False)
     event_timestamp = Column(DateTime, default=lambda: datetime.now(UTC))
+    # Earnings tracking
+    earnings = Column(Float, default=0.0, nullable=False)
+    platform_earnings = Column(Float, default=0.0, nullable=False)
+    publisher_earnings = Column(Float, default=0.0, nullable=False)
     # IPv4/IPv6 address of viewer
     viewer_ip = Column(String(45), nullable=False)
     # ISO 3166-1 alpha-2 country code
@@ -61,15 +72,14 @@ class TrackingEvent(Base):
         campaign_id: str,
         rate_limit_minutes: int,
     ) -> tuple[bool, "TrackingEvent | None"]:
-        """
-        Check if viewer has exceeded rate limit.
+        """Check if viewer has exceeded rate limit.
         Returns (is_rate_limited, last_view_event).
         """
         rate_limit_time = datetime.now(UTC) - timedelta(minutes=rate_limit_minutes)
         query = select(cls).where(
             and_(
                 cls.viewer_ip == viewer_ip,
-                cls.event_type == EventType.view,
+                cls.event_type == EventType.VIEW,
                 cls.last_view_timestamp >= rate_limit_time,
             )
         )
@@ -81,44 +91,106 @@ class TrackingEvent(Base):
         return False, recent_view
 
     @classmethod
-    async def create_view_event(
+    async def calculate_earnings(
         cls,
-        session: AsyncSession,
-        campaign_id: str,
-        ip_info: Any,
-        device: str,
+        event_type: EventType,
+        country_code: str,
         device_type: str,
-        os: str,
-        browser: str,
-        tracking_session_id: str,
-        screen_resolution: str,
-        timezone: str,
-        user_agent: str,
-        publisher_id: str,
-    ) -> "TrackingEvent":
-        """Create a new view tracking event."""
+    ) -> dict[str, float]:
+        """Calculate earnings for an event based on pricing configuration.
 
-        # TODO: First check if campaign exists and if publisher exists
+        Args:
+            event_type: Type of event (impression, click, view)
+            country_code: ISO 3166-1 alpha-2 country code
+            device_type: Type of device (mobile, tablet, desktop)
 
-        tracking_event = cls(
-            campaign_id=campaign_id,
-            event_type=EventType.view,
-            viewer_ip=ip_info.ip,
-            viewer_country=ip_info.country,
-            viewer_device=device,
-            viewer_device_type=device_type,
-            viewer_os=os,
-            viewer_browser=browser,
-            viewer_user_agent=user_agent,
-            viewer_session_id=tracking_session_id,
-            viewer_screen_resolution=screen_resolution,
-            viewer_timezone=timezone,
-            last_view_timestamp=datetime.now(UTC),
-            publisher_id=publisher_id,
+        Returns:
+            Dict containing total earnings and share breakdowns
+        """
+        pricing_manager = PricingManager()
+
+        # Calculate base earnings using pricing manager
+        revenue_details = pricing_manager.calculate_revenue(
+            country_code=country_code,
+            interaction_type=event_type.value,
+            device_type=device_type,
         )
 
-        session.add(tracking_event)
-        await session.commit()
-        await session.refresh(tracking_event)
+        earnings = revenue_details["final_rate"]
 
-        return tracking_event
+        # Calculate shares
+        platform_earnings = earnings * settings.PLATFORM_SHARE
+        publisher_earnings = earnings * settings.PUBLISHER_SHARE
+
+        return {
+            "earnings": earnings,
+            "platform_earnings": platform_earnings,
+            "publisher_earnings": publisher_earnings,
+            "currency": revenue_details["currency"],
+        }
+
+    @classmethod
+    async def create_event(
+        cls,
+        db_session: AsyncSession,
+        ad_id: str,
+        campaign_id: str,
+        event_type: EventType,
+        event_data: dict[str, Any],
+    ) -> "TrackingEvent":
+        """Create a new tracking event
+
+        Args:
+            db_session: Database session
+            ad_id: ID of the advertisement
+            campaign_id: ID of the campaign
+            event_type: Type of event (impression, click, view)
+            event_data: Dictionary containing event data
+
+        Returns:
+            The created tracking event
+        """
+        # Calculate earnings using the pricing manager
+        earnings_details = await cls.calculate_earnings(
+            event_type=event_type,
+            country_code=event_data["viewer_country"],
+            device_type=event_data["viewer_device_type"],
+        )
+
+        event = cls(
+            ad_id=ad_id,
+            campaign_id=campaign_id,
+            event_type=event_type,
+            earnings=earnings_details["earnings"],
+            platform_earnings=earnings_details["platform_earnings"],
+            publisher_earnings=earnings_details["publisher_earnings"],
+            **event_data,
+        )
+        db_session.add(event)
+
+        # Get the publisher ID from the campaign
+        campaign_result = await db_session.execute(
+            select(Campaign).where(Campaign.id == campaign_id)
+        )
+        campaign = campaign_result.scalars().first()
+        if not campaign or not campaign.publisher_id:
+            raise ValueError("Invalid campaign or publisher")
+
+        # Update publisher earnings
+        now = datetime.now(UTC)
+        views = 1 if event_type == EventType.VIEW else 0
+        clicks = 1 if event_type == EventType.CLICK else 0
+        impressions = 1 if event_type == EventType.IMPRESSION else 0
+
+        await PublisherEarnings.create_or_update_earnings(
+            db_session,
+            campaign.publisher_id,
+            now,
+            views=views,
+            clicks=clicks,
+            impressions=impressions,
+            revenue=earnings_details["earnings"],
+        )
+
+        await db_session.commit()
+        return event

@@ -5,8 +5,9 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.publisher import Publisher
+from app.models.publisher_earnings import PublisherEarnings
 from app.models.tracking_events import TrackingEvent
-from app.utils.pricing import DeviceType, PricingManager
+from app.utils.pricing import PricingManager
 
 
 class RevenueService:
@@ -32,26 +33,16 @@ class RevenueService:
         Returns:
             Dict containing the revenue calculation details
         """
-        # Map event type to interaction type
-        interaction_type = event.event_type.value
-
-        # Determine device type from user agent
-
-        # Calculate revenue for this interaction
-        revenue_details = self.pricing_manager.calculate_revenue(
-            country_code=event.viewer_country,
-            interaction_type=interaction_type,
-            device_type=DeviceType(event.viewer_device_type),
-        )
-
         # Update publisher's revenue
-        await publisher.update_revenue(session, revenue_details["final_rate"])
+        await publisher.update_revenue(session, event.publisher_earnings)
 
         return {
             "event_id": event.id,
             "publisher_id": publisher.id,
             "timestamp": datetime.utcnow(),
-            "calculation_details": revenue_details,
+            "earnings": event.earnings,
+            "publisher_earnings": event.publisher_earnings,
+            "platform_earnings": event.platform_earnings,
         }
 
     async def get_publisher_revenue_stats(
@@ -72,17 +63,18 @@ class RevenueService:
         Returns:
             Dict containing revenue statistics
         """
-        # TODO: Implement revenue statistics calculation
-        # This should include:
-        # - Total revenue
-        # - Revenue by interaction type
-        # - Revenue by country
-        # - Revenue by device type
-        # - Historical trends
-        return {
-            "publisher_id": publisher.id,
-            "total_revenue": publisher.revenue,
-            "currency": "USD",  # TODO: Handle multiple currencies
-            "minimum_payout": self.pricing_manager.minimum_payout,
-            "payment_schedule": self.pricing_manager.payment_schedule,
-        }
+        stats = await PublisherEarnings.get_revenue_stats(
+            session, publisher.id, start_date, end_date
+        )
+
+        # Add publisher-specific payment info
+        stats.update(
+            {
+                "publisher_id": publisher.id,
+                "currency": "USD",  # Using USD as default currency for now
+                "minimum_payout": self.pricing_manager.minimum_payout,
+                "payment_schedule": self.pricing_manager.payment_schedule,
+            }
+        )
+
+        return stats

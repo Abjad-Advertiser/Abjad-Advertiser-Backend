@@ -74,6 +74,7 @@ async def create_campaign(
     try:
         logger.info(f"Creating campaign for user: {current_user.id}")
         logger.info(f"Creating campaign: {campaign}")
+
         campaign_budget = f"{
             campaign.budget_allocation_amount}_{
             campaign.budget_allocation_currency}"
@@ -87,6 +88,7 @@ async def create_campaign(
             "budget_allocation_currency": campaign.budget_allocation_currency,
             "advertisement_id": campaign.advertisement_id,
         }
+
         new_campaign = await Campaign.create_campaign(
             session=session,
             campaign_data=campaign_data,

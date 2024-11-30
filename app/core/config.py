@@ -10,6 +10,8 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    PLATFORM_SHARE: float = 0.35  # NOTE: Hardcoded like that for now
+    PUBLISHER_SHARE: float = 0.65  # NOTE: Hardcoded like that for now
 
 
 settings = Settings()
