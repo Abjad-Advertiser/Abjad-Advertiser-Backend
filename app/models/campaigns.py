@@ -3,6 +3,7 @@ import enum
 import money
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import relationship
 
 from app.db import Base
 from app.models.billing_datas import BillingData
@@ -35,6 +36,9 @@ class Campaign(Base):
 
     advertisement_id = Column(String, ForeignKey("advertisements.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    publisher_id = Column(String, ForeignKey("publishers.id"), nullable=True)
+
+    publisher = relationship("Publisher", back_populates="campaigns")
 
     def __iter__(self):
         """Make the model iterable to support dict() conversion."""
@@ -47,6 +51,7 @@ class Campaign(Base):
         yield "campaign_budget", self.campaign_budget
         yield "advertisement_id", self.advertisement_id
         yield "user_id", self.user_id
+        yield "publisher_id", self.publisher_id
 
     @classmethod
     async def create_campaign(

@@ -6,6 +6,7 @@ from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Float, ForeignKey, String, and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import relationship
 
 from app.core.config import settings
 from app.db.db_session import Base
@@ -62,7 +63,10 @@ class TrackingEvent(Base):
     # Last view timestamp for rate limiting
     last_view_timestamp = Column(DateTime(timezone=True), nullable=False)
     # Publisher ID
-    publisher_id = Column(String, ForeignKey("publishers.id"), nullable=False)
+    publisher_id = Column(String, ForeignKey("publishers.id"), nullable=True)
+
+    # Relationships
+    publisher = relationship("Publisher", back_populates="tracking_events")
 
     @classmethod
     async def check_rate_limit(

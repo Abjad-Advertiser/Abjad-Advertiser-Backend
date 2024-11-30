@@ -2,7 +2,7 @@ from fastapi import Depends
 from fastapi_users.authentication.strategy.db import (AccessTokenDatabase,
                                                       DatabaseStrategy)
 from fastapi_users_db_sqlalchemy.access_token import (
-    SQLAlchemyAccessTokenDatabase, SQLAlchemyBaseAccessTokenTableUUID)
+    SQLAlchemyAccessTokenDatabase, SQLAlchemyBaseAccessTokenTable)
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 from app.db import Base, get_async_session
 
 
-class SessionsAccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
+class SessionsAccessToken(SQLAlchemyBaseAccessTokenTable[str], Base):
     """
     Access token model for storing authentication tokens.
 
@@ -24,6 +24,15 @@ class SessionsAccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
     """
 
     __tablename__ = "sessions"
+
+    country = mapped_column(String, nullable=True)
+    city = mapped_column(String, nullable=True)
+    ip = mapped_column(String, nullable=True)
+    user_agent = mapped_column(String, nullable=True)
+    device = mapped_column(String, nullable=True)
+    os = mapped_column(String, nullable=True)
+    browser = mapped_column(String, nullable=True)
+    language = mapped_column(String, nullable=True)
 
     @declared_attr
     def user_id(cls) -> Mapped[str]:
