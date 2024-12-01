@@ -40,7 +40,6 @@ class PublisherResponse(PublisherBase):
     """Schema for publisher responses."""
 
     id: str = Field(description="Unique identifier for the publisher")
-    revenue: float = Field(description="Total revenue earned by the publisher")
 
     class Config:
         """Pydantic config."""

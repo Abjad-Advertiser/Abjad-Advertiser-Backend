@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import BaseModel, Field
 
 from app.models.tracking_events import EventType
@@ -20,15 +18,8 @@ class TrackingEventCreate(TrackingEventBase):
     pass
 
 
-class TrackingEventResponse(TrackingEventBase):
-    id: str
-    event_timestamp: datetime
-    viewer_country: str
-    viewer_device: str
-    viewer_os: str
-    viewer_browser: str
-    viewer_timezone: str
-    last_view_timestamp: datetime | None = None
+class TrackingEventResponse(BaseModel):
+    status: str = "ok"
 
     class Config:
         from_attributes = True

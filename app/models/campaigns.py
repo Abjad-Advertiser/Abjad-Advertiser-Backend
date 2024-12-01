@@ -3,7 +3,6 @@ import enum
 import money
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import relationship
 
 from app.db import Base
 from app.models.billing_datas import BillingData
@@ -21,24 +20,18 @@ class CampaignStatus(str, enum.Enum):
 
 class Campaign(Base):
     __tablename__ = "campaigns"
-    id = Column(String, autoincrement=False, primary_key=True, default=generate_cuid)
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
 
     campaign_name = Column(String, nullable=False)
     campaign_description = Column(String, nullable=False)
-    campaign_start_date = Column(DateTime, nullable=False)
-    campaign_end_date = Column(DateTime, nullable=False)
-
-    campaign_status = Column(
-        Enum(CampaignStatus), nullable=False, default=CampaignStatus.DRAFT
-    )
+    campaign_start_date = Column(DateTime(timezone=True), nullable=False)
+    campaign_end_date = Column(DateTime(timezone=True), nullable=False)
+    campaign_status = Column(Enum(CampaignStatus), default=CampaignStatus.DRAFT)
     campaign_budget = Column(String, nullable=True, default="0.00_USD")
     campaign_budget_used = Column(String, nullable=True, default="0.00_USD")
 
     advertisement_id = Column(String, ForeignKey("advertisements.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    publisher_id = Column(String, ForeignKey("publishers.id"), nullable=True)
-
-    publisher = relationship("Publisher", back_populates="campaigns")
 
     def __iter__(self):
         """Make the model iterable to support dict() conversion."""
@@ -51,7 +44,6 @@ class Campaign(Base):
         yield "campaign_budget", self.campaign_budget
         yield "advertisement_id", self.advertisement_id
         yield "user_id", self.user_id
-        yield "publisher_id", self.publisher_id
 
     @classmethod
     async def create_campaign(
@@ -231,9 +223,16 @@ class Campaign(Base):
             raise ModelError(reason="Amount must be positive", status=400)
 
         # Parse current budget and used amount
-        current_budget = float(self.campaign_budget.split("_")[0])
-        current_used = float(self.campaign_budget_used.split("_")[0])
-        currency = self.campaign_budget.split("_")[1]
+        budget_value = self.campaign_budget.replace("$", "").strip()
+        used_value = (
+            self.campaign_budget_used.replace("$", "").strip()
+            if self.campaign_budget_used
+            else "0_USD"
+        )
+
+        current_budget = float(budget_value.split("_")[0])
+        current_used = float(used_value.split("_")[0])
+        currency = "USD"  # Stander
 
         # Check if increasing would exceed budget
         if current_used + amount > current_budget:

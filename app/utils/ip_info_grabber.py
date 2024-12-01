@@ -31,61 +31,43 @@ class IPInfoGrabber:
         self.api_key = api_key
 
     def _get_api_response(self, ip_address: str) -> dict:
-        """
-        Makes a request to the first available API URL
-
-        Args:
-            ip_address: IPv4 or IPv6 address to look up
-
-        Returns:
-            API response as a JSON dict
-
-        Raises:
-            requests.RequestException: If all API requests fail
-        """
         last_exception = None
         for url in self.API_URLS:
             try:
                 response = requests.get(f"{url.replace('#ip_address', ip_address)}")
                 response.raise_for_status()
                 return response.json()
-
             except requests.RequestException as e:
                 last_exception = e
                 continue
-
-        # If all APIs fail, raise the last exception
         if last_exception:
             raise last_exception
 
-    def get_ip_info(self, ip_address: str) -> IPInformation:
-        """
-        Fetches IP geolocation information using multiple IP API services
+    def get_ip_info(self, ip_address: str, debug: bool = False) -> IPInformation:
+        if debug and ip_address in ["127.0.0.1", "::1"]:
+            return IPInformation(
+                ip=ip_address,
+                country="Unknown",
+                latitude=0.0,
+                longitude=0.0,
+                timezone="Unknown",
+                is_eu=False,
+                city="Unknown",
+            )
 
-        Args:
-            ip_address: IPv4 or IPv6 address to look up
-
-        Returns:
-            IPInformation object containing geolocation data
-
-        Raises:
-            requests.RequestException: If all API requests fail or if IP is invalid
-        """
-        # Basic IP validation
         if not any(
             [
-                ":" in ip_address,  # IPv6
+                ":" in ip_address,
                 all(
                     part.isdigit() and 0 <= int(part) <= 255
                     for part in ip_address.split(".")
-                ),  # IPv4
+                ),
             ]
         ):
             raise requests.RequestException(f"Invalid IP address format: {ip_address}")
 
         data = self._get_api_response(ip_address)
 
-        # Handle different API response formats
         if data.get("countryCode"):
             return IPInformation(
                 ip=ip_address,
@@ -135,7 +117,7 @@ class IPInfoGrabber:
                 ],
                 city=data["city"],
             )
-        else:  # ipinfo.io
+        else:
             try:
                 loc = data.get("loc", "0,0").split(",")
                 return IPInformation(

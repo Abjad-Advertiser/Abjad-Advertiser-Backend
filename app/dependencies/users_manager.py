@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response
 from fastapi_users import BaseUserManager, InvalidID, InvalidPasswordException
 
 from app.core.config import settings
@@ -28,6 +28,15 @@ class UserManager(BaseUserManager[User, str]):
         except ValueError as e:
             raise InvalidID() from e
 
+    async def on_after_login(
+        self,
+        user: User,
+        request: Request | None = None,
+        response: Response | None = None,
+    ):
+        # TODO: Send welcome email
+        print(f"User {user.id} logged in.")
+
     async def on_after_register(self, user: User, request: Request | None = None):
         """
         Called after a user has successfully registered.
@@ -49,6 +58,7 @@ class UserManager(BaseUserManager[User, str]):
             token (str): The reset token generated for the user.
             request (Optional[Request]): The request object, if available.
         """
+        # TODO: Send reset password email
         print(
             f"User {
                 user.id} has forgot their password. Reset token: {token}"
@@ -65,10 +75,15 @@ class UserManager(BaseUserManager[User, str]):
             token (str): The verification token generated for the user.
             request (Optional[Request]): The request object, if available.
         """
+        # TODO: Send verify email
         print(
             f"Verification requested for user {
                 user.id}. Verification token: {token}"
         )
+
+    async def on_after_verify(self, user: User, request: Request | None = None):
+        # TODO: Send your acccount has been verified email
+        print(f"User {user.id} has been verified")
 
     async def validate_password(self, password: str, user: UserCreate | User):
         """

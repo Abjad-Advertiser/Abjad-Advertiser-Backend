@@ -39,10 +39,9 @@ class SystemLog(Base):
 
     __tablename__ = "system_logs"
 
-    id = Column(String, primary_key=True, default=generate_cuid)
-    timestamp = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
-    )
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
     level = Column(Enum(LogLevel), nullable=False, index=True)
     category = Column(Enum(LogCategory), nullable=False, index=True)
 
@@ -94,6 +93,8 @@ class SystemLog(Base):
         Returns:
             Created log entry
         """
+        import traceback
+
         log_entry = cls(
             level=level,
             category=category,
@@ -108,7 +109,10 @@ class SystemLog(Base):
         if error:
             log_entry.error_type = error.__class__.__name__
             log_entry.error_details = str(error)
-            log_entry.stack_trace = getattr(error, "__traceback__", None)
+            if error.__traceback__:
+                log_entry.stack_trace = "".join(
+                    traceback.format_tb(error.__traceback__)
+                )
 
         session.add(log_entry)
         await session.commit()

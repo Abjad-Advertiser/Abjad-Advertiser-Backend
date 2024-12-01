@@ -167,7 +167,7 @@ class TxAsyncSession(AsyncSession):
 @asynccontextmanager
 async def get_transactional_session(
     session_class: type[AsyncSession] = TxAsyncSession,
-    commit_on_exit: bool = True,
+    commit_on_exit: bool = False,
 ) -> AsyncGenerator[TxAsyncSession, None]:
     """Get a transactional session.
 
@@ -186,44 +186,54 @@ async def get_transactional_session(
     Yields:
         Transactional session
     """
-    from app.db.db_session import async_sessionmaker
+    from app.db.db_session import AsyncSessionLocal
 
-    async with async_sessionmaker() as session:
-        if not isinstance(session, TxAsyncSession):
-            session = TxAsyncSession(
-                session.bind,
-                **{k: v for k, v in session.__dict__.items() if not k.startswith("_")},
-            )
+    # Create a new session using the factory
+    base_session = AsyncSessionLocal()
 
-        session.set_commit_on_exit(commit_on_exit)
+    # If it's not already a TxAsyncSession, wrap it
+    if not isinstance(base_session, TxAsyncSession):
+        # Create a new TxAsyncSession with the same bind and options
+        session = TxAsyncSession(bind=base_session.bind)
+        # Copy any relevant session options
+        for key, value in base_session.__dict__.items():
+            if not key.startswith("_") and key != "bind":
+                setattr(session, key, value)
+        # Close the original session since we've wrapped it
+        await base_session.close()
+    else:
+        session = base_session
 
-        try:
-            yield session
-            if commit_on_exit:
+    session.set_commit_on_exit(commit_on_exit)
+    try:
+        yield session
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        if commit_on_exit:
+            try:
                 await session.final_commit()
-        except Exception:
-            await session.rollback()
-            raise
+            except Exception:
+                await session.rollback()
+                raise
+        await session.close()
 
 
-def get_tx_session(
-    commit_on_exit: bool = True,
-) -> AsyncGenerator[TxAsyncSession, None]:
+async def get_tx_session() -> AsyncGenerator[TxAsyncSession, None]:
     """FastAPI dependency for getting a transactional session.
 
     Usage:
         @router.post("/")
-        async def endpoint(session: TxAsyncSession = Depends(get_tx_session())):
+        async def endpoint(session: TxAsyncSession = Depends(get_tx_session)):
             # Do your database operations
             # All commits will be deferred until endpoint completion
             await db_operation_1(session)
             await db_operation_2(session)
             # On successful completion, all changes will be committed
 
-    Args:
-        commit_on_exit: Whether to commit on successful exit
-
     Returns:
         Async generator yielding a transactional session
     """
-    return get_transactional_session(commit_on_exit=commit_on_exit)
+    async with get_transactional_session() as session:
+        yield session

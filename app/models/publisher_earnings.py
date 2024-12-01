@@ -1,33 +1,58 @@
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer,
-                        String, and_, func, select)
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Float, ForeignKey, Integer, String, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import logger as logging
 from app.db.db_session import Base
 from app.utils.cuid import generate_cuid
+from app.utils.pricing import PricingManager
 
 # deferred imports to prevent circular imports
 if TYPE_CHECKING:
     pass
 
 
+class WithdrawalStatus(str, Enum):
+    """Status of publisher earnings withdrawal."""
+
+    PENDING = "pending"  # Initial state
+    WITHDRAWAL_REQUESTED = "withdrawal_requested"  # Publisher requested withdrawal
+    WITHDRAWAL_APPROVED = "withdrawal_approved"  # Admin approved withdrawal
+    WITHDRAWAL_COMPLETED = "withdrawal_completed"  # Payment sent to publisher
+    WITHDRAWAL_REJECTED = "withdrawal_rejected"  # Admin rejected withdrawal
+
+
 class PublisherEarnings(Base):
     __tablename__ = "publisher_earnings"
 
-    id = Column(String, primary_key=True, default=generate_cuid)
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
     publisher_id = Column(String, ForeignKey("publishers.id"), nullable=False)
-    month = Column(DateTime, nullable=False)  # First day of the month
+
+    month = Column(DateTime(timezone=True), nullable=False)  # First day of the month
+
     total_views = Column(Integer, default=0, nullable=False)
     total_clicks = Column(Integer, default=0, nullable=False)
     total_impressions = Column(Integer, default=0, nullable=False)
+
     gross_revenue = Column(Float, default=0.0, nullable=False)
     publisher_share = Column(Float, default=0.0, nullable=False)  # 65% of gross revenue
     platform_share = Column(Float, default=0.0, nullable=False)  # 35% of gross revenue
+
+    withdrawal_status = Column(
+        SQLEnum(WithdrawalStatus), default=WithdrawalStatus.PENDING
+    )
+    withdrawal_requested_at = Column(DateTime(timezone=True), nullable=True)
+    withdrawal_processed_at = Column(DateTime(timezone=True), nullable=True)
+    withdrawal_notes = Column(String, nullable=True)
+
     is_paid = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    paid_at = Column(DateTime(timezone=True), nullable=True)
 
     @classmethod
     async def get_monthly_earnings(
@@ -54,24 +79,71 @@ class PublisherEarnings(Base):
         views: int = 0,
         clicks: int = 0,
         impressions: int = 0,
-        revenue: float = 0.0,
+        gross_revenue: float = 0.0,
+        publisher_share: float = 0.0,
+        platform_share: float = 0.0,
     ) -> "PublisherEarnings":
         """Create or update earnings for a month"""
+        logging.info(f"Creating or updating earnings for publisher {
+                     publisher_id} for month {month.strftime('%Y-%m')}")
         earnings = await cls.get_monthly_earnings(db_session, publisher_id, month)
-
         if not earnings:
-            earnings = cls(publisher_id=publisher_id, month=month.replace(day=1))
+            logging.info(f"Creating new earnings record for publisher {
+                         publisher_id} for month {month.strftime('%Y-%m')}")
+            earnings = cls(
+                publisher_id=publisher_id,
+                month=month.replace(day=1),
+                total_views=0,
+                total_clicks=0,
+                total_impressions=0,
+                gross_revenue=0.0,
+                publisher_share=0.0,
+                platform_share=0.0,
+            )
             db_session.add(earnings)
+        else:
+            logging.info(f"Updating existing earnings for publisher {
+                         publisher_id} for month {month.strftime('%Y-%m')}")
 
-        # Update stats
-        earnings.total_views += views
-        earnings.total_clicks += clicks
-        earnings.total_impressions += impressions
-        earnings.gross_revenue += revenue
+        logging.info(
+            f"Current earnings state - Gross: ${
+                earnings.gross_revenue or 0:.4f}, Publisher: ${
+                earnings.publisher_share or 0:.4f}, Platform: ${
+                earnings.platform_share or 0:.4f}"
+        )
 
-        # Calculate shares (35% platform, 65% publisher)
-        earnings.platform_share = earnings.gross_revenue * 0.35
-        earnings.publisher_share = earnings.gross_revenue * 0.65
+        # Update stats with null checks
+        earnings.total_views = (earnings.total_views or 0) + views
+        earnings.total_clicks = (earnings.total_clicks or 0) + clicks
+        earnings.total_impressions = (earnings.total_impressions or 0) + impressions
+
+        if views:
+            logging.info(
+                f"Incrementing views by {views}, new total: {
+                    earnings.total_views}"
+            )
+        if clicks:
+            logging.info(
+                f"Incrementing clicks by {clicks}, new total: {
+                    earnings.total_clicks}"
+            )
+        if impressions:
+            logging.info(
+                f"Incrementing impressions by {impressions}, new total: {
+                    earnings.total_impressions}"
+            )
+
+        # Update earnings
+        earnings.gross_revenue = (earnings.gross_revenue or 0.0) + gross_revenue
+        earnings.publisher_share = (earnings.publisher_share or 0.0) + publisher_share
+        earnings.platform_share = (earnings.platform_share or 0.0) + platform_share
+
+        logging.info(
+            f"Updated earnings state - Gross: ${
+                earnings.gross_revenue:.4f}, Publisher: ${
+                earnings.publisher_share:.4f}, Platform: ${
+                earnings.platform_share:.4f}"
+        )
 
         await db_session.commit()
         return earnings
@@ -297,3 +369,111 @@ class PublisherEarnings(Base):
             )
 
         return stats
+
+    @classmethod
+    async def request_withdrawal(
+        cls,
+        db_session: AsyncSession,
+        publisher_id: str,
+        month: datetime,
+    ) -> tuple[bool, str]:
+        """Request withdrawal of earnings for a specific month.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        # Get earnings record
+        earnings = await cls.get_monthly_earnings(db_session, publisher_id, month)
+        if not earnings:
+            return False, "No earnings found for the specified month"
+
+        # Check if withdrawal is already in progress
+        if earnings.withdrawal_status != WithdrawalStatus.PENDING:
+            return (
+                False,
+                f"Withdrawal already in {
+                    earnings.withdrawal_status} status",
+            )
+
+        # Check minimum days passed (7 days)
+        min_days = 7
+        days_passed = (datetime.now(UTC) - earnings.created_at).days
+        if days_passed < min_days:
+            return (
+                False,
+                f"Must wait {
+                    min_days -
+                    days_passed} more days before requesting withdrawal",
+            )
+
+        # Check minimum payout amount
+        min_payout = PricingManager().minimum_payout
+        if earnings.publisher_share < min_payout:
+            return False, f"Minimum payout amount is ${min_payout:.2f}"
+
+        # Update status
+        earnings.withdrawal_status = WithdrawalStatus.WITHDRAWAL_REQUESTED
+        earnings.withdrawal_requested_at = datetime.now(UTC)
+        await db_session.commit()
+
+        return True, "Withdrawal request submitted successfully"
+
+    @classmethod
+    async def process_withdrawal(
+        cls,
+        db_session: AsyncSession,
+        earnings_id: str,
+        approve: bool,
+        notes: str | None = None,
+    ) -> tuple[bool, str]:
+        """Process (approve/reject) a withdrawal request.
+
+        Args:
+            db_session: Database session
+            earnings_id: ID of the earnings record
+            approve: True to approve, False to reject
+            notes: Optional notes about the decision
+
+        Returns:
+            Tuple of (success, message)
+        """
+        # Get earnings record
+        result = await db_session.execute(select(cls).where(cls.id == earnings_id))
+        earnings = result.scalar_one_or_none()
+        if not earnings:
+            return False, "Earnings record not found"
+
+        # Check if request is pending
+        if earnings.withdrawal_status != WithdrawalStatus.WITHDRAWAL_REQUESTED:
+            return (
+                False,
+                f"Cannot process withdrawal in {
+                    earnings.withdrawal_status} status",
+            )
+
+        # Update status
+        if approve:
+            earnings.withdrawal_status = WithdrawalStatus.WITHDRAWAL_COMPLETED
+        else:
+            earnings.withdrawal_status = WithdrawalStatus.WITHDRAWAL_REJECTED
+
+        earnings.withdrawal_processed_at = datetime.now(UTC)
+        earnings.withdrawal_notes = notes
+
+        await db_session.commit()
+
+        status = "approved" if approve else "rejected"
+        return True, f"Withdrawal request {status} successfully"
+
+    @classmethod
+    async def get_pending_withdrawals(
+        cls,
+        db_session: AsyncSession,
+    ) -> list["PublisherEarnings"]:
+        """Get all pending withdrawal requests."""
+        result = await db_session.execute(
+            select(cls)
+            .where(cls.withdrawal_status == WithdrawalStatus.WITHDRAWAL_REQUESTED)
+            .order_by(cls.withdrawal_requested_at)
+        )
+        return result.scalars().all()

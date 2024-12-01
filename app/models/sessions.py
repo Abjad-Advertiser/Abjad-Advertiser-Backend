@@ -9,6 +9,8 @@ from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 from app.db import Base, get_async_session
 
+# TODO: add a way to fill up the fields
+
 
 class SessionsAccessToken(SQLAlchemyBaseAccessTokenTable[str], Base):
     """

@@ -11,8 +11,8 @@ from app.models.publisher import Publisher
 from app.models.publisher_earnings import PublisherEarnings
 from app.models.users import User
 from app.schemas.publisher import (PeriodicRevenue, PublisherCreate,
-                                   PublisherResponse, PublisherStats,
-                                   PublisherUpdate, RevenueStats)
+                                   PublisherResponse, PublisherUpdate,
+                                   RevenueStats)
 from app.services.revenue import RevenueService
 
 publisher_router = APIRouter(prefix="/publishers", tags=["publishers"])
@@ -157,44 +157,6 @@ async def delete_publisher(
         raise HTTPException(status_code=404, detail="Publisher not found")
     await publisher.delete(session)
     return {"message": "Publisher deleted successfully"}
-
-
-@publisher_router.get("/{publisher_id}/stats", response_model=PublisherStats)
-async def get_publisher_stats(
-    publisher_id: str,
-    current_user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> dict:
-    """Get statistics for a specific publisher. Only returns stats for publishers owned by the current user.
-
-    Example:
-        GET /api/v1/publishers/clh2x3e0h0000qw9k3q7q8j9k/stats
-
-    Returns:
-        {
-            "total_revenue": 1250.50,
-            "total_impressions": 50000,
-            "total_clicks": 2500,
-            "average_ctr": 0.05,
-            "revenue_by_platform": {
-                "desktop": 750.30,
-                "mobile": 500.20
-            },
-            "revenue_by_country": {
-                "US": 800.40,
-                "UK": 450.10
-            }
-        }
-
-    Raises:
-        404: Publisher not found or doesn't belong to current user
-    """
-    publisher = await Publisher.get_user_publisher(
-        session, current_user.id, publisher_id
-    )
-    if not publisher:
-        raise HTTPException(status_code=404, detail="Publisher not found")
-    return await publisher.get_stats(session)
 
 
 @publisher_router.get("/{publisher_id}/revenue", response_model=RevenueStats)
