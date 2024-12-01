@@ -74,6 +74,13 @@ async def create_campaign(
     try:
         logger.info(f"Creating campaign for user: {current_user.id}")
         logger.info(f"Creating campaign: {campaign}")
+
+        if campaign.budget_allocation_currency != billing_data.currency:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Budget currency must be the same as billing currency",
+            )
+
         campaign_budget = f"{
             campaign.budget_allocation_amount}_{
             campaign.budget_allocation_currency}"
@@ -87,6 +94,7 @@ async def create_campaign(
             "budget_allocation_currency": campaign.budget_allocation_currency,
             "advertisement_id": campaign.advertisement_id,
         }
+
         new_campaign = await Campaign.create_campaign(
             session=session,
             campaign_data=campaign_data,

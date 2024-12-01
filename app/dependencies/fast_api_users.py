@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport
 
@@ -8,13 +10,14 @@ from .users_manager import get_user_manager
 
 # Cookie transport configuration
 # This defines how the session ID is transmitted in HTTP requests via cookies.
-cookie_transport = CookieTransport("token-v1", cookie_max_age=3600)
+lifetime_seconds = timedelta(weeks=2).total_seconds()
+cookie_transport = CookieTransport("token-v1", cookie_max_age=lifetime_seconds)
 
 # Authentication backend configuration
 # This section configures the authentication backend, specifying how
 # sessions are managed.
 auth_backend = AuthenticationBackend(
-    name="session",  # Identifier for the authentication backend
+    name="Abjad Backend",  # Identifier for the authentication backend
     transport=cookie_transport,  # Defines how sessions are transmitted
     get_strategy=get_database_strategy,  # Defines how sessions are handled
 )

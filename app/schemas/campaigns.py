@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
@@ -19,8 +19,8 @@ class CampaignCreate(BaseModel):
 
     @field_validator("budget_allocation_currency")
     def validate_currency(cls, v):
-        if v not in ["USD", "SAR"]:
-            raise ValueError("Currency must be USD or SAR")
+        if v not in ["USD"]:
+            raise ValueError("Currency must be USD")
         return v
 
     @field_validator("budget_allocation_amount")
@@ -33,7 +33,7 @@ class CampaignCreate(BaseModel):
 
     @field_validator("campaign_start_date")
     def validate_campaign_start_date(cls, v):
-        max_start_date = datetime.now() + timedelta(days=60)
+        max_start_date = datetime.now(UTC) + timedelta(days=60)
         if v > max_start_date:
             raise ValueError(
                 "Campaign start date cannot be more than 2 months from now"

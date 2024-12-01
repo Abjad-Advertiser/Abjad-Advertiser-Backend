@@ -20,17 +20,15 @@ class CampaignStatus(str, enum.Enum):
 
 class Campaign(Base):
     __tablename__ = "campaigns"
-    id = Column(String, autoincrement=False, primary_key=True, default=generate_cuid)
+    id = Column(String, primary_key=True, autoincrement=False, default=generate_cuid)
 
     campaign_name = Column(String, nullable=False)
     campaign_description = Column(String, nullable=False)
-    campaign_start_date = Column(DateTime, nullable=False)
-    campaign_end_date = Column(DateTime, nullable=False)
-
-    campaign_status = Column(
-        Enum(CampaignStatus), nullable=False, default=CampaignStatus.DRAFT
-    )
-    campaign_budget = Column(String, nullable=False)
+    campaign_start_date = Column(DateTime(timezone=True), nullable=False)
+    campaign_end_date = Column(DateTime(timezone=True), nullable=False)
+    campaign_status = Column(Enum(CampaignStatus), default=CampaignStatus.DRAFT)
+    campaign_budget = Column(String, nullable=True, default="0.00_USD")
+    campaign_budget_used = Column(String, nullable=True, default="0.00_USD")
 
     advertisement_id = Column(String, ForeignKey("advertisements.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
@@ -69,18 +67,35 @@ class Campaign(Base):
         Returns:
             Campaign: The created campaign
         """
-        # Validate and process budget
+        # Validate and process budge
         allocated_budget = money.Money(
             campaign_data["budget_allocation_amount"],
             campaign_data["budget_allocation_currency"],
         )
 
-        if allocated_budget.amount > billing_data.balance:
-            raise ModelError(reason="Insufficient balance", status=400)
-
         # Convert budget to USD if needed
         if allocated_budget.currency != "USD":
             allocated_budget = allocated_budget.to("USD")
+
+        # Calculate total budget for all campaigns including the new one
+        # NOTE: Lazy approuch, but works for now.
+        # TODO: Find a better solution
+        all_campaigns = await cls.get_user_campaigns(session, user_id)
+        total_budget = sum(
+            float(c.campaign_budget.split("_")[0]) for c in all_campaigns
+        )
+        total_budget += float(allocated_budget.amount)
+
+        # Check if total budget exceeds available balance
+        if total_budget > billing_data.balance:
+            raise ModelError(
+                reason="Insufficient balance for all campaigns", status=400
+            )
+
+        # Update campaign_budget to use USD
+        campaign_data["campaign_budget"] = f"{
+            allocated_budget.amount:.2f}_{
+            billing_data.currency}"
 
         campaign = cls(
             campaign_name=campaign_data["campaign_name"],
@@ -191,4 +206,43 @@ class Campaign(Base):
         await cls.get_campaign_by_id(session, campaign_id, user_id)
 
         await session.execute(cls.__table__.delete().where(cls.id == campaign_id))
+        await session.commit()
+
+    async def increase_budget_used(self, session: AsyncSession, amount: float) -> None:
+        """
+        Increase the amount of budget used for this campaign.
+
+        Args:
+            session: The database session
+            amount: The amount to increase (must be positive)
+
+        Raises:
+            ModelError: If the budget would be exceeded or amount is invalid
+        """
+        if amount <= 0:
+            raise ModelError(reason="Amount must be positive", status=400)
+
+        # Parse current budget and used amount
+        budget_value = self.campaign_budget.replace("$", "").strip()
+        used_value = (
+            self.campaign_budget_used.replace("$", "").strip()
+            if self.campaign_budget_used
+            else "0_USD"
+        )
+
+        current_budget = float(budget_value.split("_")[0])
+        current_used = float(used_value.split("_")[0])
+        currency = "USD"  # Stander
+
+        # Check if increasing would exceed budget
+        if current_used + amount > current_budget:
+            raise ModelError(
+                reason=f"Budget would be exceeded. Available: {
+                    current_budget -
+                    current_used} {currency}",
+                status=400,
+            )
+
+        # Update the used amount
+        self.campaign_budget_used = f"{current_used + amount:.2f}_{currency}"
         await session.commit()

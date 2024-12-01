@@ -17,9 +17,11 @@ from collections.abc import Generator
 
 import pytest
 import requests
+from dotenv import load_dotenv
 
 from app.models.users import UserType
 
+load_dotenv()
 # Set up logging configuration
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -48,7 +50,6 @@ def test_user_data():
     }
 
 
-@pytest.mark.integration
 def test_auth_flow(client: requests.Session, test_user_data: dict):
     """
     Test the complete authentication flow including:

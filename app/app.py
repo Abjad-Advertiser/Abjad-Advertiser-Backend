@@ -7,6 +7,8 @@ from app.api.v1.advertisers import advertisers_router
 from app.api.v1.auth import auth_router
 from app.api.v1.billing import billing_router
 from app.api.v1.campaigns import campaign_router
+from app.api.v1.publishers import publisher_router
+from app.api.v1.tracker import tracker_router
 from app.db import create_db_and_tables
 
 
@@ -45,3 +47,5 @@ app.include_router(general_router, prefix=api_v1_prefix, tags=["General"])
 app.include_router(advertisers_router, prefix=api_v1_prefix, tags=["Advertisers"])
 app.include_router(campaign_router, prefix=api_v1_prefix, tags=["Campaigns"])
 app.include_router(billing_router, prefix=api_v1_prefix, tags=["Billing"])
+app.include_router(tracker_router, prefix=api_v1_prefix, tags=["Tracker"])
+app.include_router(publisher_router, prefix=api_v1_prefix, tags=["Publishers"])

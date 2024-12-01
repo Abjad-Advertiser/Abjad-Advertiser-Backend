@@ -36,7 +36,6 @@ def client():
     return requests.Session()
 
 
-@pytest.mark.integration
 def test_billing_flow(client):
     """
     Test the complete flow of billing data management.
@@ -58,7 +57,7 @@ def test_billing_flow(client):
     updated_billing_data = {
         "billing_address": "456 Updated Street, Updated City, 67890",
         "tax_id": "TAX789012",
-        "currency": "EUR",
+        "currency": "USD",
     }
 
     # Step 1: Login user
@@ -68,9 +67,10 @@ def test_billing_flow(client):
         data={"username": test_user["email"], "password": test_user["password"]},
     )
     assert login_response.status_code == 204
+    cookie_value = login_response.headers.get("set-cookie")
     headers = {
         "user-agent": "abjad/1.0",
-        "cookie": f"token-v1={login_response.cookies.get('token-v1')}",
+        "cookie": f"{cookie_value}",
     }
 
     # Step 2: Create billing data
@@ -105,6 +105,7 @@ def test_billing_flow(client):
         headers=headers,
         cookies=login_response.cookies,
     )
+    logger.info(update_response.text)
     assert update_response.status_code == 200
     updated_billing = update_response.json()
     assert updated_billing["billing_address"] == updated_billing_data["billing_address"]
