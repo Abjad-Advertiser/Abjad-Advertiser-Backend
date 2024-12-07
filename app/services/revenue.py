@@ -5,7 +5,6 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.publisher import Publisher
-from app.models.publisher_earnings import PublisherEarnings
 from app.utils.pricing import PricingManager
 
 
@@ -34,18 +33,19 @@ class RevenueService:
         Returns:
             Dict containing revenue statistics
         """
-        stats = await PublisherEarnings.get_revenue_stats(
-            session, publisher.id, start_date, end_date
-        )
+        raise NotImplementedError("Implement get_publisher_revenue_stats method")
+        # stats = await PublisherEarnings.get_revenue_stats(
+        #     session, publisher.id, start_date, end_date
+        # )
 
-        # Add publisher-specific payment info
-        stats.update(
-            {
-                "publisher_id": publisher.id,
-                "currency": "USD",  # Using USD as default currency for now
-                "minimum_payout": self.pricing_manager.minimum_payout,
-                "payment_schedule": self.pricing_manager.payment_schedule,
-            }
-        )
+        # # Add publisher-specific payment info
+        # stats.update(
+        #     {
+        #         "publisher_id": publisher.id,
+        #         "currency": "USD",  # Using USD as default currency for now
+        #         "minimum_payout": self.pricing_manager.minimum_payout,
+        #         "payment_schedule": self.pricing_manager.payment_schedule,
+        #     }
+        # )
 
-        return stats
+        # return stats
